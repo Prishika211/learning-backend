@@ -5,6 +5,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { deleteFile } from "../utils/FileUtils.js";
+import mongoose from "mongoose";
 
 const generateAcessandRefreshToken = async (userId) => {
   try {
@@ -170,8 +171,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined // this removes the field from document
+      $unset: {
+        refreshToken: 1 // this removes the field from document
       }
     },
     {
@@ -427,7 +428,7 @@ const getUserChannelProfile = asyncHandler(async (req, res)=>{
         },
         isSubscribed: {
           $cond: {
-            if: {$in: [req.user?._id, "subscribers.subscriber"]},
+            if: {$in: [req.user?._id, "$subscribers.subscriber"]},
             then: true,
             else: false
           }
@@ -463,7 +464,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(req.user._id)
+        _id: new mongoose.Types.ObjectId(String(req.user._id))
       }
     },
     {
