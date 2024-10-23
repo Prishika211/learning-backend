@@ -15,67 +15,62 @@ const getVideoComments = asyncHandler(async (req, res) => {
             "Invalid video ID"
         )
     }
+
+    const commentsPipeline = [
+        {
+            $match: {
+                video: new mongoose.Types.ObjectId(String(videoId))
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "details",
+                pipeline: [
+                    {
+                        $project: {
+                            fullName: 1,
+                            avatar: 1,
+                            username: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "comment",
+                as: "likes",
+            }
+        },
+        {
+            $addFields: {
+                details: {
+                    $first: "$details"
+                }
+            }
+        },
+        {
+            $addFields: {
+                likes: {
+                    $size: "$likes"
+                }
+            }
+        },
+        {
+            $skip: (page-1)*limit
+        },
+        {
+            $limit: parseInt(limit)
+        }
+    ]
     let getAllComments;
     try{
-        getAllComments = await Comment.aggregate([
-            {
-                $match: {
-                    video: new mongoose.Types.ObjectId(String(videoId))
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "owner",
-                    foreignField: "_id",
-                    as: "details",
-                    pipeline: [
-                        {
-                            $project: {
-                                fullName: 1,
-                                avatar: 1,
-                                username: 1
-                            }
-                        }
-                    ]
-                }
-            },
-            {
-                $lookup: {
-                    from: "likes",
-                    localField: "owner",
-                    foreignField: "likedBy",
-                    as: "likes",
-                    pipeline: [
-                        {
-                            $match: {
-                                comment: {$exists: true}
-                            }
-                         }
-                    ]
-                }
-            },
-            {
-                $addFields: {
-                    details: {
-                        $first: "$details"
-                    }
-                }
-            },
-            {
-                $addFields: {
-                    likes: {
-                        $size: "$likes"
-                    }
-                }
-            },
-            {
-                $skip: (page-1)*limit
-            },
-            {
-                $limit: parseInt(limit)
-            }
-        ])
+        getAllComments = await Comment.aggregate(commentsPipeline)
     } catch (error) {
         throw new ApiError(
             500,
@@ -83,11 +78,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
         )
     }  
 
-    const result = await Comment.aggregatePaginate(getAllComments, {
-        page, limit
-    })
-
-    if(result.docs.length === 0){
+    if(getAllComments.length === 0){
         return res.status(200).
         json(new ApiResponse(
             200,
@@ -101,7 +92,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
     .json(
         new ApiResponse(
             200,
-            result.docs,
+            getAllComments,
             "Comments retrieved successfully"
         )
     )
