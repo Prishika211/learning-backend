@@ -202,7 +202,7 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     const {title, description} = req.body;
-    const {file} = req.files
+    const {file} = req.file
 
     if(!isValidObjectId(videoId)){
         throw new ApiError(
