@@ -106,21 +106,6 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                         localField: "owner",
                         foreignField: "_id",
                         as: "createdBy",
-                        pipeline: [
-                            {
-                                foreignField: "_id",
-                                as: "createdBy",
-                                pipeline: [
-                                    {
-                                       $project: {
-                                        avatar: 1,
-                                        fullName: 1,
-                                        username: 1
-                                       } 
-                                    }
-                                ]
-                            }
-                        ]
                     }
                 },
                 {
@@ -133,7 +118,11 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
                 {
                     $project: {
                         videos: 1,
-                        createdBy: 1,
+                        createdBy: {
+                            avatar: 1,
+                            fullName: 1,
+                            username: 1
+                        },
                         name: 1,
                         description: 1
                     }
@@ -375,7 +364,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
         const newPlayListVideo = (playList.videos).filter(v => v.toString() !== videoId)
         
-        const updatePlayListVideo = Playlist.findByIdandUpdate(
+        const updatePlayListVideo = await Playlist.findByIdAndUpdate(
             playList._id,
             {
                 $set:{
@@ -496,7 +485,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         )
     }
   
-    const updatedPlaylist = await Playlist.findByIdandUpdate(
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistId,
         {
             $set: {
